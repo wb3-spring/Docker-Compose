@@ -1,0 +1,112 @@
+---
+version: '3'
+services:
+## --- Software Infrastructure Concerns --- ##
+  config-server: 
+    image: wb3spring/config-server
+    dns:
+      - 8.8.8.8
+    ports:
+      - "3000:3000"
+    networks:
+      wb3_net:
+        aliases:
+          - msconfig
+    deploy:
+      replicas: 3
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+         condition: on-failure
+         delay: 5s
+         max_attempts: 3
+         window: 60s
+  service-discovery:
+    image: consul
+    ports:
+      - "3001:8500"
+    networks:
+      - wb3_net
+    deploy: 
+      replicas: 3
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 60s
+  microservice-discovery:
+    image: wb3spring/microservice-discovery
+    depends_on:
+      - config-server
+    networks:
+      wb3_net:
+        aliases:
+          - msdiscovery
+    ports:
+      - "3002:3002"
+    deploy:
+      replicas: 3
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 2
+        window: 60s
+  edge-server:
+    image: wb3spring/edge-server
+    depends_on:
+      - config-server
+      - microservice-discovery
+    networks:
+      wb3_net:
+        aliases:
+          - msedge
+    ports:
+      - "3003:3003"
+    deploy:
+      replicas: 3
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 2
+        window: 60s
+  trace-server:
+    image: wb3spring/trace-server
+    depends_on:
+      - config-server
+      - microservice-discovery
+    networks:
+      wb3_net:
+        aliases:
+          - mstrace
+    ports:
+      - "3004:3004"
+    deploy:
+      replicas: 3
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 2
+        window: 60s
+
+## --- Microservices --- ##
+
+
+## --- Container Network --- ##
+networks:
+  wb3_net:
+    driver: overlay
+    ipam:
+      driver: default
